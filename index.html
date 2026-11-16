@@ -7,8 +7,9 @@
 <title>RAINBOW TETRIS</title>
 <style>
 *{box-sizing:border-box}
+html,body{margin:0;min-height:100%;overscroll-behavior:none}
 body{
- margin:0;min-height:100vh;
+ min-height:100vh;
  background:radial-gradient(circle at top,#29245e,#090b1d 70%);
  color:white;font-family:system-ui,sans-serif;
  display:flex;justify-content:center;align-items:center;
@@ -68,8 +69,7 @@ button:active{transform:scale(.94)}
 textarea{
  width:100%;min-height:76px;resize:vertical;
  border:1px solid #8275c8;border-radius:9px;
- background:#090d24;color:white;padding:10px;
- font-size:12px;margin:7px 0;
+ background:#090d24;color:white;padding:10px;font-size:12px;margin:7px 0;
 }
 .save-buttons{display:flex;gap:8px;flex-wrap:wrap}
 .save-buttons button{flex:1;min-width:120px}
@@ -267,10 +267,8 @@ function clearLines(){
     const speed=1.5+Math.random()*5;
     particles.push({
      x:x*SIZE+SIZE/2,y:y*SIZE+SIZE/2,
-     vx:Math.cos(angle)*speed,
-     vy:Math.sin(angle)*speed,
-     life:1,color,
-     size:3+Math.random()*5
+     vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
+     life:1,color,size:3+Math.random()*5
     });
    }
   }
@@ -293,9 +291,7 @@ function clearLines(){
    board.splice(y,1);
    board.unshift(Array(COLS).fill(0));
   });
-  clearRows=[];
-  particles=[];
-  clearing=false;
+  clearRows=[];particles=[];clearing=false;
   spawnNext();
  },420);
 
@@ -349,10 +345,8 @@ function draw(){
   }));
  }
 
- // 消える行に虹色の光を重ねる
  if(clearing){
-  const elapsed=performance.now()-clearStart;
-  const alpha=Math.max(0,1-elapsed/420);
+  const alpha=Math.max(0,1-(performance.now()-clearStart)/420);
   clearRows.forEach(y=>{
    ctx.fillStyle=`rgba(255,255,255,${alpha})`;
    ctx.fillRect(0,y*SIZE,300,SIZE);
@@ -362,8 +356,7 @@ function draw(){
    gradient.addColorStop(.5,'#39e9d0');
    gradient.addColorStop(.75,'#8d70ff');
    gradient.addColorStop(1,'#ff4d9d');
-   ctx.fillStyle=gradient;
-   ctx.globalAlpha=alpha;
+   ctx.fillStyle=gradient;ctx.globalAlpha=alpha;
    ctx.fillRect(0,y*SIZE+10,300,10);
    ctx.globalAlpha=1;
   });
@@ -373,24 +366,21 @@ function draw(){
 function drawParticles(){
  particles.forEach(p=>{
   ctx.globalAlpha=Math.max(0,p.life);
-  ctx.fillStyle=p.color;
-  ctx.shadowColor=p.color;ctx.shadowBlur=12;
+  ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=12;
   ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
  });
  ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
 function updateParticles(){
  particles.forEach(p=>{
-  p.x+=p.vx;p.y+=p.vy;
-  p.vy+=.12;p.vx*=.98;p.life-=.035;
+  p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.vx*=.98;p.life-=.035;
  });
  particles=particles.filter(p=>p.life>0);
 }
 function drawNext(){
  nx.clearRect(0,0,120,120);
  nx.fillStyle='#0b1027';nx.fillRect(0,0,120,120);
- const s=nextPiece.shape;
- const w=s[0].length*23,h=s.length*23;
+ const s=nextPiece.shape,w=s[0].length*23,h=s.length*23;
  const ox=(120-w)/2,oy=(120-h)/2;
  s.forEach((row,y)=>row.forEach((v,x)=>{
   if(v)paintSmall(ox+x*23,oy+y*23,nextPiece.color);
@@ -423,21 +413,13 @@ function restart(){
  updateStats();drawNext();draw();
 }
 
-// セーブコード発行
+// セーブコード
 function makeSaveCode(){
- if(!board||!player){
-  setSaveStatus('ゲームがまだ準備できていません');
-  return;
- }
- const data={
-  version:1,
-  board,player,nextPiece,
-  score,lines,level,best
- };
- const json=JSON.stringify(data);
- const code='RT1-'+btoa(unescape(encodeURIComponent(json)));
+ if(!board||!player)return;
+ const data={version:1,board,player,nextPiece,score,lines,level,best};
+ const code='RT1-'+btoa(unescape(encodeURIComponent(JSON.stringify(data))));
  document.getElementById('saveCode').value=code;
- setSaveStatus('セーブコードを発行したよ！コピーして保存してね');
+ setSaveStatus('セーブコードを発行したよ！');
 }
 async function copySaveCode(){
  const box=document.getElementById('saveCode');
@@ -445,91 +427,85 @@ async function copySaveCode(){
  if(!box.value)return;
  try{
   await navigator.clipboard.writeText(box.value);
-  setSaveStatus('コピー成功！別の端末にも貼り付けられるよ 📋');
+  setSaveStatus('コピー成功！ 📋');
  }catch(e){
   box.focus();box.select();
   const ok=document.execCommand('copy');
-  setSaveStatus(ok?'コピーしたよ！':'テキストを選択して手動でコピーしてね');
+  setSaveStatus(ok?'コピーしたよ！':'テキストを選択してコピーしてね');
  }
 }
 function loadSaveCode(){
  const code=document.getElementById('saveCode').value.trim();
  try{
   if(!code.startsWith('RT1-'))throw new Error('コードの形式が違います');
-  const json=decodeURIComponent(escape(atob(code.slice(4))));
-  const data=JSON.parse(json);
-
-  if(data.version!==1)throw new Error('対応していないセーブコードです');
+  const data=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));
+  if(data.version!==1)throw new Error('対応していないコードです');
   if(!Array.isArray(data.board)||data.board.length!==ROWS||
      !data.board.every(r=>Array.isArray(r)&&r.length===COLS))
    throw new Error('盤面データが正しくありません');
   if(!validPiece(data.player)||!validPiece(data.nextPiece))
    throw new Error('ブロックデータが正しくありません');
   if(!Number.isFinite(data.score)||!Number.isFinite(data.lines)||
-     !Number.isFinite(data.level))
-   throw new Error('スコアデータが正しくありません');
+     !Number.isFinite(data.level))throw new Error('スコアが不正です');
 
-  board=data.board;
-  player=data.player;
-  nextPiece=data.nextPiece;
+  board=data.board;player=data.player;nextPiece=data.nextPiece;
   score=data.score;lines=data.lines;level=data.level;
   best=Math.max(best,Number(data.best)||0);
   localStorage.setItem('rainbowBest',best);
   document.getElementById('best').textContent=best;
-
   dropInterval=Math.max(100,850-(level-1)*65);
   dropCounter=0;running=true;paused=false;over=false;clearing=false;
   particles=[];clearRows=[];
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('message').textContent='セーブデータを読み込んだよ！ 🌈';
   updateStats();drawNext();draw();
-  setSaveStatus('引き継ぎ成功！ゲームを再開できるよ 🎉');
- }catch(e){
-  setSaveStatus('読み込み失敗：'+e.message);
- }
+  setSaveStatus('引き継ぎ成功！ 🎉');
+ }catch(e){setSaveStatus('読み込み失敗：'+e.message);}
 }
 function validPiece(p){
  return p&&Array.isArray(p.shape)&&p.shape.length>0&&
-  p.shape.every(r=>Array.isArray(r)&&r.length>0&&
-   r.every(v=>v===0||v===1))&&
-  typeof p.color==='string'&&
-  Number.isInteger(p.x)&&Number.isInteger(p.y);
+ p.shape.every(r=>Array.isArray(r)&&r.length>0&&r.every(v=>v===0||v===1))&&
+ typeof p.color==='string'&&Number.isInteger(p.x)&&Number.isInteger(p.y);
 }
 function setSaveStatus(message){
  document.getElementById('saveStatus').textContent=message;
 }
 
-function update(time=0){
- const delta=time-last;last=time;
- if(running&&!paused&&!over&&!clearing){
-  dropCounter+=delta;
-  if(dropCounter>dropInterval){
-   softStep();dropCounter=0;
-  }
+// キー操作：スペースによるページスクロールを防ぐ
+document.addEventListener('keydown',e=>{
+ const gameKeys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'];
+ if(gameKeys.includes(e.code)){
+  e.preventDefault();
  }
- if(clearing){
-  updateParticles();
-  draw();
- }
- requestAnimationFrame(update);
-}
+ if(e.repeat&&e.code==='Space')return;
+
+ if(e.code==='ArrowLeft')move(-1);
+ if(e.code==='ArrowRight')move(1);
+ if(e.code==='ArrowUp')rotate();
+ if(e.code==='ArrowDown')softDrop();
+ if(e.code==='Space')hardDrop();
+ if(e.key.toLowerCase()==='p')togglePause();
+ if(e.key.toLowerCase()==='r')restart();
+},{passive:false});
+
+// スペースキーを押したままでもスクロールさせない
+window.addEventListener('wheel',()=>{}, {passive:true});
+
 function softStep(){
  if(!running||paused||over||clearing)return;
  player.y++;
  if(collide(player)){player.y--;lock();}
  draw();
 }
-document.addEventListener('keydown',e=>{
- if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))
-  e.preventDefault();
- if(e.key==='ArrowLeft')move(-1);
- if(e.key==='ArrowRight')move(1);
- if(e.key==='ArrowUp')rotate();
- if(e.key==='ArrowDown')softDrop();
- if(e.code==='Space')hardDrop();
- if(e.key.toLowerCase()==='p')togglePause();
- if(e.key.toLowerCase()==='r')restart();
-});
+function update(time=0){
+ const delta=time-last;last=time;
+ if(running&&!paused&&!over&&!clearing){
+  dropCounter+=delta;
+  if(dropCounter>dropInterval){softStep();dropCounter=0;}
+ }
+ if(clearing){updateParticles();draw();}
+ requestAnimationFrame(update);
+}
 
 restart();
 requestAnimationFrame(update);
