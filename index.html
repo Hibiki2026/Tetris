@@ -19,7 +19,6 @@ h1{
  font-size:clamp(30px,7vw,48px);margin:4px;
  background:linear-gradient(90deg,#ff4d9d,#ffd43b,#39e9d0,#8d70ff);
  color:transparent;background-clip:text;
- text-shadow:0 0 25px #a45cff55;
 }
 .sub{color:#aeb5e8;margin-bottom:15px}
 .stats{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
@@ -33,8 +32,7 @@ h1{
 canvas{
  display:block;width:min(68vw,300px);height:auto;
  border:2px solid #a78bfa;border-radius:10px;
- background:#0b1027;
- box-shadow:0 0 25px #8b5cf655;
+ background:#0b1027;box-shadow:0 0 25px #8b5cf655;
 }
 .side{width:110px}
 .panel{
@@ -52,18 +50,30 @@ button{
 button:active{transform:scale(.94)}
 .buttons{display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap}
 .mobile{display:flex;gap:10px;justify-content:center;margin-top:10px}
-.mobile button{min-width:55px;font-size:21px}
+.mobile button{min-width:48px;font-size:21px}
 #message{height:25px;color:#ffd86b;font-weight:bold}
-#screen{
- position:relative;display:inline-block;
-}
+#screen{position:relative;display:inline-block}
 #overlay{
  display:none;position:absolute;inset:0;
  background:#080b1ddd;border-radius:10px;
- align-items:center;justify-content:center;flex-direction:column;
- gap:12px;
+ align-items:center;justify-content:center;flex-direction:column;gap:12px;
 }
 #overlay.show{display:flex}
+.save-panel{
+ margin:18px 0;padding:14px;text-align:left;
+ background:#ffffff12;border:1px solid #ffffff30;border-radius:14px;
+}
+.save-panel h3{margin:0 0 8px;color:#ffe082}
+.save-panel p{font-size:13px;color:#c3c7e9}
+textarea{
+ width:100%;min-height:76px;resize:vertical;
+ border:1px solid #8275c8;border-radius:9px;
+ background:#090d24;color:white;padding:10px;
+ font-size:12px;margin:7px 0;
+}
+.save-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.save-buttons button{flex:1;min-width:120px}
+#saveStatus{font-size:12px;color:#7fffd4;min-height:18px}
 @keyframes shake{
  0%,100%{transform:translate(0,0)}
  15%{transform:translate(-7px,3px)}
@@ -81,10 +91,8 @@ button:active{transform:scale(.94)}
 .bigshake{animation:shake .48s ease}
 .flash{animation:flash .3s ease}
 @media(max-width:420px){
- .side{width:88px}
- .game-layout{gap:7px}
- .panel{padding:7px}
- #next{width:75px;height:75px}
+ .side{width:88px}.game-layout{gap:7px}
+ .panel{padding:7px}#next{width:75px;height:75px}
 }
 </style>
 </head>
@@ -103,7 +111,7 @@ button:active{transform:scale(.94)}
  <div id="screen">
   <canvas id="board" width="300" height="600"></canvas>
   <div id="overlay">
-   <h2 id="overTitle">GAME OVER</h2>
+   <h2>GAME OVER 💥</h2>
    <div id="finalScore"></div>
    <button onclick="restart()">もう一度遊ぶ</button>
   </div>
@@ -120,14 +128,11 @@ button:active{transform:scale(.94)}
   <div class="panel">
    <small>CONTROLS</small>
    <p style="font-size:12px;line-height:1.8">
-    ← → 移動<br>
-    ↑ 回転<br>
-    ↓ 落下<br>
-    SPACE 一気に落下<br>
-    P 一時停止
+    ← → 移動<br>↑ 回転<br>↓ 落下<br>
+    SPACE 一気に落下<br>P 一時停止
    </p>
   </div>
- </div>
+</div>
 </div>
 
 <div id="message"></div>
@@ -142,6 +147,20 @@ button:active{transform:scale(.94)}
  <button onclick="move(1)">▶</button>
  <button onclick="hardDrop()">⬇</button>
 </div>
+
+<div class="save-panel">
+ <h3>💾 セーブ・引き継ぎ</h3>
+ <p>セーブコードを発行してコピーすると、別の端末やブラウザでもゲームを続きから遊べるよ！</p>
+ <div class="save-buttons">
+  <button onclick="makeSaveCode()">📋 セーブコード発行</button>
+  <button onclick="copySaveCode()">📄 コードをコピー</button>
+ </div>
+ <textarea id="saveCode" placeholder="ここにセーブコードが表示されるよ"></textarea>
+ <div class="save-buttons">
+  <button onclick="loadSaveCode()">📥 コードを入力して引き継ぐ</button>
+ </div>
+ <div id="saveStatus"></div>
+</div>
 </div>
 
 <script>
@@ -151,7 +170,6 @@ const nc=document.getElementById('next');
 const nx=nc.getContext('2d');
 
 const COLS=10,ROWS=20,SIZE=30;
-
 const shapes=[
  {color:'#ff4d9d',shape:[[1,1,1,1]]},
  {color:'#38d9ff',shape:[[1,0,0],[1,1,1]]},
@@ -163,9 +181,11 @@ const shapes=[
 ];
 
 let board,player,nextPiece,score,lines,level;
-let running=false,paused=false,over=false;
+let running=false,paused=false,over=false,clearing=false;
 let last=0,dropCounter=0,dropInterval=850;
 let best=Number(localStorage.getItem('rainbowBest')||0);
+let particles=[],clearRows=[],clearStart=0;
+
 document.getElementById('best').textContent=best;
 
 function emptyBoard(){
@@ -173,11 +193,7 @@ function emptyBoard(){
 }
 function randomPiece(){
  const p=shapes[Math.floor(Math.random()*shapes.length)];
- return {
-  shape:p.shape.map(r=>[...r]),
-  color:p.color,
-  x:3,y:0
- };
+ return {shape:p.shape.map(r=>[...r]),color:p.color,x:3,y:0};
 }
 function collide(p){
  for(let y=0;y<p.shape.length;y++)
@@ -191,72 +207,99 @@ function collide(p){
 }
 function merge(){
  player.shape.forEach((row,y)=>row.forEach((v,x)=>{
-  if(v&&player.y+y>=0)
-   board[player.y+y][player.x+x]=player.color;
+  if(v&&player.y+y>=0)board[player.y+y][player.x+x]=player.color;
  }));
 }
 function rotate(){
- if(!running||paused||over)return;
+ if(!running||paused||over||clearing)return;
  const old=player.shape;
- const rotated=old[0].map((_,i)=>old.map(row=>row[i]).reverse());
- player.shape=rotated;
+ player.shape=old[0].map((_,i)=>old.map(row=>row[i]).reverse());
  if(collide(player))player.shape=old;
  draw();
 }
 function move(dir){
- if(!running||paused||over)return;
+ if(!running||paused||over||clearing)return;
  player.x+=dir;
  if(collide(player))player.x-=dir;
  draw();
 }
 function softDrop(){
- if(!running||paused||over)return;
+ if(!running||paused||over||clearing)return;
  player.y++;
- if(collide(player)){
-  player.y--;
-  lock();
- }else score+=1;
+ if(collide(player)){player.y--;lock();}
+ else score++;
  updateStats();draw();
 }
 function hardDrop(){
- if(!running||paused||over)return;
+ if(!running||paused||over||clearing)return;
  while(!collide(player))player.y++;
- player.y--;
- lock();
+ player.y--;lock();
+}
+function spawnNext(){
+ player=nextPiece;
+ nextPiece=randomPiece();
+ drawNext();
+ if(collide(player))endGame();
+ draw();
 }
 function lock(){
  merge();
  shake(false);
- clearLines();
- player=nextPiece;
- nextPiece=randomPiece();
- drawNext();
- if(collide(player)){
-  endGame();
- }
- draw();
+ const didClear=clearLines();
+ if(!didClear)spawnNext();
 }
 function clearLines(){
- let count=0;
- for(let y=ROWS-1;y>=0;y--){
-  if(board[y].every(Boolean)){
+ clearRows=[];
+ for(let y=0;y<ROWS;y++){
+  if(board[y].every(Boolean))clearRows.push(y);
+ }
+ if(!clearRows.length)return false;
+
+ clearing=true;
+ clearStart=performance.now();
+ particles=[];
+
+ clearRows.forEach(y=>{
+  for(let x=0;x<COLS;x++){
+   const color=board[y][x];
+   for(let i=0;i<9;i++){
+    const angle=Math.random()*Math.PI*2;
+    const speed=1.5+Math.random()*5;
+    particles.push({
+     x:x*SIZE+SIZE/2,y:y*SIZE+SIZE/2,
+     vx:Math.cos(angle)*speed,
+     vy:Math.sin(angle)*speed,
+     life:1,color,
+     size:3+Math.random()*5
+    });
+   }
+  }
+ });
+
+ const count=clearRows.length;
+ const points=[0,100,300,500,800];
+ score+=points[count]*level;
+ lines+=count;
+ level=Math.floor(lines/10)+1;
+ dropInterval=Math.max(100,850-(level-1)*65);
+ updateStats();
+ shake(true);
+
+ document.getElementById('message').textContent=
+  ['','NICE! ✨','DOUBLE! 💥','TRIPLE! 🌈','TETRIS!!! 🔥'][count];
+
+ setTimeout(()=>{
+  clearRows.sort((a,b)=>b-a).forEach(y=>{
    board.splice(y,1);
    board.unshift(Array(COLS).fill(0));
-   count++;y++;
-  }
- }
- if(count){
-  const points=[0,100,300,500,800];
-  score+=points[count]*level;
-  lines+=count;
-  level=Math.floor(lines/10)+1;
-  dropInterval=Math.max(100,850-(level-1)*65);
-  shake(true);
-  document.getElementById('message').textContent=
-   ['','NICE! ✨','DOUBLE! 💥','TRIPLE! 🌈','TETRIS!!! 🔥'][count];
-  setTimeout(()=>document.getElementById('message').textContent='',1000);
- }
- updateStats();
+  });
+  clearRows=[];
+  particles=[];
+  clearing=false;
+  spawnNext();
+ },420);
+
+ return true;
 }
 function shake(strong){
  const screen=document.getElementById('screen');
@@ -279,17 +322,15 @@ function updateStats(){
   document.getElementById('best').textContent=best;
  }
 }
-function drawCell(c,x,y,size=SIZE){
- c.fillStyle=x.color;
- c.shadowColor=x.color;
- c.shadowBlur=9;
- c.fillRect(y*size+2,0,0,0);
+function paint(c,x,y,color){
+ c.fillStyle=color;c.shadowColor=color;c.shadowBlur=10;
+ c.fillRect(x*SIZE+2,y*SIZE+2,SIZE-4,SIZE-4);
+ c.shadowBlur=0;c.fillStyle='#ffffff45';
+ c.fillRect(x*SIZE+5,y*SIZE+5,SIZE-10,4);
 }
 function draw(){
- ctx.clearRect(0,0,canvas.width,canvas.height);
- ctx.fillStyle='#0b1027';
- ctx.fillRect(0,0,300,600);
-
+ ctx.clearRect(0,0,300,600);
+ ctx.fillStyle='#0b1027';ctx.fillRect(0,0,300,600);
  ctx.strokeStyle='#ffffff12';
  for(let x=0;x<=COLS;x++){
   ctx.beginPath();ctx.moveTo(x*SIZE,0);ctx.lineTo(x*SIZE,600);ctx.stroke();
@@ -307,15 +348,43 @@ function draw(){
    if(v)paint(ctx,player.x+x,player.y+y,player.color);
   }));
  }
+
+ // 消える行に虹色の光を重ねる
+ if(clearing){
+  const elapsed=performance.now()-clearStart;
+  const alpha=Math.max(0,1-elapsed/420);
+  clearRows.forEach(y=>{
+   ctx.fillStyle=`rgba(255,255,255,${alpha})`;
+   ctx.fillRect(0,y*SIZE,300,SIZE);
+   const gradient=ctx.createLinearGradient(0,0,300,0);
+   gradient.addColorStop(0,'#ff4d9d');
+   gradient.addColorStop(.25,'#ffd43b');
+   gradient.addColorStop(.5,'#39e9d0');
+   gradient.addColorStop(.75,'#8d70ff');
+   gradient.addColorStop(1,'#ff4d9d');
+   ctx.fillStyle=gradient;
+   ctx.globalAlpha=alpha;
+   ctx.fillRect(0,y*SIZE+10,300,10);
+   ctx.globalAlpha=1;
+  });
+ }
+ drawParticles();
 }
-function paint(c,x,y,color){
- c.fillStyle=color;
- c.shadowColor=color;
- c.shadowBlur=10;
- c.fillRect(x*SIZE+2,y*SIZE+2,SIZE-4,SIZE-4);
- c.shadowBlur=0;
- c.fillStyle='#ffffff45';
- c.fillRect(x*SIZE+5,y*SIZE+5,SIZE-10,4);
+function drawParticles(){
+ particles.forEach(p=>{
+  ctx.globalAlpha=Math.max(0,p.life);
+  ctx.fillStyle=p.color;
+  ctx.shadowColor=p.color;ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+ });
+ ctx.globalAlpha=1;ctx.shadowBlur=0;
+}
+function updateParticles(){
+ particles.forEach(p=>{
+  p.x+=p.vx;p.y+=p.vy;
+  p.vy+=.12;p.vx*=.98;p.life-=.035;
+ });
+ particles=particles.filter(p=>p.life>0);
 }
 function drawNext(){
  nx.clearRect(0,0,120,120);
@@ -328,53 +397,126 @@ function drawNext(){
  }));
 }
 function paintSmall(x,y,color){
- nx.fillStyle=color;
- nx.shadowColor=color;nx.shadowBlur=8;
- nx.fillRect(x+2,y+2,19,19);
- nx.shadowBlur=0;
- nx.fillStyle='#ffffff55';
- nx.fillRect(x+4,y+4,15,3);
+ nx.fillStyle=color;nx.shadowColor=color;nx.shadowBlur=8;
+ nx.fillRect(x+2,y+2,19,19);nx.shadowBlur=0;
+ nx.fillStyle='#ffffff55';nx.fillRect(x+4,y+4,15,3);
 }
 function endGame(){
  over=true;running=false;
  document.getElementById('overlay').classList.add('show');
- document.getElementById('overTitle').textContent='GAME OVER 💥';
  document.getElementById('finalScore').textContent='SCORE: '+score;
  shake(true);
 }
 function togglePause(){
- if(over)return;
- if(!running)return;
+ if(over||!running)return;
  paused=!paused;
  document.getElementById('message').textContent=paused?'PAUSED ⏸':'';
 }
 function restart(){
- board=emptyBoard();
- score=0;lines=0;level=1;
+ board=emptyBoard();score=0;lines=0;level=1;
  dropInterval=850;dropCounter=0;
  player=randomPiece();nextPiece=randomPiece();
- running=true;paused=false;over=false;
+ running=true;paused=false;over=false;clearing=false;
+ particles=[];clearRows=[];
  document.getElementById('overlay').classList.remove('show');
  document.getElementById('message').textContent='';
  updateStats();drawNext();draw();
 }
+
+// セーブコード発行
+function makeSaveCode(){
+ if(!board||!player){
+  setSaveStatus('ゲームがまだ準備できていません');
+  return;
+ }
+ const data={
+  version:1,
+  board,player,nextPiece,
+  score,lines,level,best
+ };
+ const json=JSON.stringify(data);
+ const code='RT1-'+btoa(unescape(encodeURIComponent(json)));
+ document.getElementById('saveCode').value=code;
+ setSaveStatus('セーブコードを発行したよ！コピーして保存してね');
+}
+async function copySaveCode(){
+ const box=document.getElementById('saveCode');
+ if(!box.value)makeSaveCode();
+ if(!box.value)return;
+ try{
+  await navigator.clipboard.writeText(box.value);
+  setSaveStatus('コピー成功！別の端末にも貼り付けられるよ 📋');
+ }catch(e){
+  box.focus();box.select();
+  const ok=document.execCommand('copy');
+  setSaveStatus(ok?'コピーしたよ！':'テキストを選択して手動でコピーしてね');
+ }
+}
+function loadSaveCode(){
+ const code=document.getElementById('saveCode').value.trim();
+ try{
+  if(!code.startsWith('RT1-'))throw new Error('コードの形式が違います');
+  const json=decodeURIComponent(escape(atob(code.slice(4))));
+  const data=JSON.parse(json);
+
+  if(data.version!==1)throw new Error('対応していないセーブコードです');
+  if(!Array.isArray(data.board)||data.board.length!==ROWS||
+     !data.board.every(r=>Array.isArray(r)&&r.length===COLS))
+   throw new Error('盤面データが正しくありません');
+  if(!validPiece(data.player)||!validPiece(data.nextPiece))
+   throw new Error('ブロックデータが正しくありません');
+  if(!Number.isFinite(data.score)||!Number.isFinite(data.lines)||
+     !Number.isFinite(data.level))
+   throw new Error('スコアデータが正しくありません');
+
+  board=data.board;
+  player=data.player;
+  nextPiece=data.nextPiece;
+  score=data.score;lines=data.lines;level=data.level;
+  best=Math.max(best,Number(data.best)||0);
+  localStorage.setItem('rainbowBest',best);
+  document.getElementById('best').textContent=best;
+
+  dropInterval=Math.max(100,850-(level-1)*65);
+  dropCounter=0;running=true;paused=false;over=false;clearing=false;
+  particles=[];clearRows=[];
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('message').textContent='セーブデータを読み込んだよ！ 🌈';
+  updateStats();drawNext();draw();
+  setSaveStatus('引き継ぎ成功！ゲームを再開できるよ 🎉');
+ }catch(e){
+  setSaveStatus('読み込み失敗：'+e.message);
+ }
+}
+function validPiece(p){
+ return p&&Array.isArray(p.shape)&&p.shape.length>0&&
+  p.shape.every(r=>Array.isArray(r)&&r.length>0&&
+   r.every(v=>v===0||v===1))&&
+  typeof p.color==='string'&&
+  Number.isInteger(p.x)&&Number.isInteger(p.y);
+}
+function setSaveStatus(message){
+ document.getElementById('saveStatus').textContent=message;
+}
+
 function update(time=0){
  const delta=time-last;last=time;
- if(running&&!paused&&!over){
+ if(running&&!paused&&!over&&!clearing){
   dropCounter+=delta;
   if(dropCounter>dropInterval){
-   softStep();
-   dropCounter=0;
+   softStep();dropCounter=0;
   }
+ }
+ if(clearing){
+  updateParticles();
+  draw();
  }
  requestAnimationFrame(update);
 }
 function softStep(){
+ if(!running||paused||over||clearing)return;
  player.y++;
- if(collide(player)){
-  player.y--;
-  lock();
- }
+ if(collide(player)){player.y--;lock();}
  draw();
 }
 document.addEventListener('keydown',e=>{
