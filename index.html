@@ -9,21 +9,19 @@
 *{box-sizing:border-box}
 html,body{
  margin:0;min-height:100%;width:100%;
- overscroll-behavior:none;
- touch-action:manipulation;
+ overscroll-behavior:none;touch-action:manipulation;
 }
 body{
  color:white;text-align:center;
  font-family:system-ui,sans-serif;
  background:radial-gradient(circle at top,#29365b,#101426 75%);
- user-select:none;-webkit-user-select:none;
- overflow-x:hidden;
+ user-select:none;-webkit-user-select:none;overflow-x:hidden
 }
 button{
  border:0;border-radius:12px;padding:12px 18px;
  background:linear-gradient(135deg,#ff4da6,#8065ff);
  color:white;font-weight:bold;font-size:16px;
- cursor:pointer;touch-action:manipulation;
+ cursor:pointer;touch-action:manipulation
 }
 button:active{transform:scale(.96)}
 .screen{display:none;padding:18px 10px}
@@ -32,57 +30,33 @@ h1{font-size:35px;letter-spacing:3px;margin:20px 0 5px}
 .subtitle{color:#bbc5e8;margin-bottom:25px}
 .menu-card{
  max-width:440px;margin:18px auto;padding:24px;
- background:#ffffff12;border:1px solid #ffffff25;
- border-radius:22px
+ background:#ffffff12;border:1px solid #ffffff25;border-radius:22px
 }
-.mode-button{
- display:block;width:100%;margin:16px 0;
- padding:20px;font-size:22px
-}
-.mode-button small{
- display:block;font-size:13px;font-weight:normal;margin-top:7px
-}
+.mode-button{display:block;width:100%;margin:16px 0;padding:20px;font-size:22px}
+.mode-button small{display:block;font-size:13px;font-weight:normal;margin-top:7px}
 .topbar{
  max-width:600px;margin:auto;display:flex;
- justify-content:space-between;align-items:center;
- gap:8px;flex-wrap:wrap
+ justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap
 }
-.stats{
- display:flex;gap:8px;justify-content:center;
- margin:12px auto;flex-wrap:wrap
-}
-.stat{
- background:#ffffff15;border:1px solid #ffffff22;
- border-radius:10px;padding:8px 13px;min-width:75px
-}
+.stats{display:flex;gap:8px;justify-content:center;margin:12px auto;flex-wrap:wrap}
+.stat{background:#ffffff15;border:1px solid #ffffff22;border-radius:10px;padding:8px 13px;min-width:75px}
 .stat span{display:block;color:#aebbe4;font-size:11px}
 .stat b{font-size:19px}
 #boardWrap{
- position:relative;margin:10px auto;
- width:min(92vw,360px);
- background:#080d1c;border:4px solid #7180b9;
- border-radius:8px;overflow:hidden;
- touch-action:none;
+ position:relative;margin:10px auto;width:min(92vw,360px);
+ background:#080d1c;border:4px solid #7180b9;border-radius:8px;
+ overflow:hidden;touch-action:none
 }
-canvas{
- display:block;width:100%;height:auto;
- touch-action:none;
- -webkit-user-select:none;
- user-select:none;
-}
-.controls{
- display:flex;justify-content:center;
- gap:10px;margin:12px auto;flex-wrap:wrap
-}
+canvas{display:block;width:100%;height:auto;touch-action:none}
+.controls{display:flex;justify-content:center;gap:10px;margin:12px auto;flex-wrap:wrap}
 #mobileControls{
  display:grid;grid-template-columns:repeat(4,1fr);
  gap:8px;max-width:360px;margin:12px auto
 }
 #mobileControls button{padding:15px 5px;font-size:20px}
 #overlay{
- display:none;position:absolute;inset:0;
- background:#080d1ce8;align-items:center;
- justify-content:center;flex-direction:column;gap:14px
+ display:none;position:absolute;inset:0;background:#080d1ce8;
+ align-items:center;justify-content:center;flex-direction:column;gap:14px
 }
 #overlay.show{display:flex}
 #overlay h2{font-size:30px;margin:0}
@@ -101,7 +75,7 @@ canvas{
   </button>
   <button class="mode-button" onclick="startGame('sand')">
    🏖️ 砂テトリス
-   <small>細かい砂の粒が崩れ落ちる！</small>
+   <small>砂になって崩れ落ちる！</small>
   </button>
   <p class="note">砂テトリスは同じ色の砂が左右の端をつなぐと消えるよ。</p>
  </div>
@@ -141,9 +115,7 @@ canvas{
   <button onclick="softDrop()">▼</button>
  </div>
 
- <div class="note" id="help">
-  ← → 移動　↑ 回転　↓ 落下　スペースで一気に落下
- </div>
+ <div class="note" id="help"></div>
 </section>
 
 <script>
@@ -154,6 +126,7 @@ const ctx=canvas.getContext('2d');
 
 const W=10,H=20,S=30;
 const SW=100,SH=200,MICRO=3;
+const TOTAL=SW*SH;
 
 const COLORS=[
  '#ff4b78','#ffad42','#ffe34d',
@@ -172,20 +145,18 @@ const SHAPES=[
 
 let mode='normal';
 let board=[];
-let sand=new Uint8Array(SW*SH);
-let active=new Uint8Array(SW*SH);
+let sand=new Uint8Array(TOTAL);
+let particles=[];
 let piece=null;
 
 let score=0,lines=0,best=0;
 let running=false,paused=false,gameOver=false;
-let animationId=null;
-let lastTime=0;
-let normalTimer=0,sandTimer=0,elapsed=0;
-let normalInterval=700;
+let animationId=null,lastTime=0;
+let normalTimer=0,elapsed=0,normalInterval=700;
 
-try{
- best=Number(localStorage.getItem('rainbowTetrisBest')||0);
-}catch(e){best=0}
+let occupancy=new Uint8Array(TOTAL);
+
+try{best=Number(localStorage.getItem('rainbowTetrisBest')||0)}catch(e){}
 
 function idx(x,y){return y*SW+x}
 function inside(x,y){return x>=0&&x<SW&&y>=0&&y<SH}
@@ -200,7 +171,7 @@ function startGame(m){
 
  document.getElementById('help').textContent=
   m==='sand'
-  ?'矢印キー・スワイプで移動　タップで回転　下スワイプで落下'
+  ?'矢印キー・スワイプで移動　タップで回転　スペースで爆速落下'
   :'← → 移動　↑ 回転　↓ 落下　スペースで一気に落下';
 
  restartGame();
@@ -216,12 +187,10 @@ function backToMenu(){
 function restartGame(){
  board=Array.from({length:H},()=>Array(W).fill(0));
  sand.fill(0);
- active.fill(0);
+ particles=[];
  piece=null;
-
  score=0;lines=0;elapsed=0;
- normalTimer=0;sandTimer=0;
- normalInterval=700;
+ normalTimer=0;normalInterval=700;
  paused=false;gameOver=false;running=true;
 
  document.getElementById('overlay').classList.remove('show');
@@ -241,23 +210,16 @@ function restartGame(){
 function updateStats(){
  document.getElementById('score').textContent=score;
  document.getElementById('lines').textContent=lines;
-
  best=Math.max(best,score);
  document.getElementById('best').textContent=best;
-
- try{
-  localStorage.setItem('rainbowTetrisBest',String(best));
- }catch(e){}
+ try{localStorage.setItem('rainbowTetrisBest',String(best))}catch(e){}
 }
 
 /* 通常テトリス */
 
 function spawnNormal(){
  const n=Math.floor(Math.random()*SHAPES.length);
- piece={
-  shape:SHAPES[n].map(r=>r.slice()),
-  x:3,y:0,color:n+1
- };
+ piece={shape:SHAPES[n].map(r=>r.slice()),x:3,y:0,color:n+1};
  if(normalCollides(piece,0,0))endGame();
 }
 
@@ -274,8 +236,7 @@ function normalCollides(p,dx,dy){
 }
 
 function normalMove(dx){
- if(!piece)return;
- if(!normalCollides(piece,dx,0))piece.x+=dx;
+ if(piece&&!normalCollides(piece,dx,0))piece.x+=dx;
 }
 
 function normalRotate(){
@@ -312,32 +273,72 @@ function normalLock(){
   score+=[0,100,300,500,800][count]||count*250;
   normalInterval=Math.max(120,700-lines*13);
  }
-
  updateStats();
  spawnNormal();
 }
 
 /* 砂テトリス */
 
-function sandInterval(){
- // 最初はゆっくり。時間をかけて少しずつ速くする
- return Math.max(105,240-elapsed*0.00045);
+function rebuildOccupancy(){
+ occupancy.fill(0);
+ for(let i=0;i<TOTAL;i++)if(sand[i])occupancy[i]=1;
+
+ for(const p of particles){
+  const x=Math.floor(p.x),y=Math.floor(p.y);
+  if(inside(x,y))occupancy[idx(x,y)]=1;
+ }
 }
 
-function hasActive(){
- for(let i=0;i<active.length;i++){
-  if(active[i])return true;
- }
- return false;
+function makeParticle(x,y,color,controlled=true,boost=false){
+ return {
+  x,y,prevX:x,prevY:y,
+  color,
+  controlled,
+  boost,
+  vx:0,
+  vy:boost?260:12,
+  settled:false
+ };
 }
 
 function spawnSand(){
+ rebuildOccupancy();
+
  const n=Math.floor(Math.random()*SHAPES.length);
  const shape=SHAPES[n];
  const color=n+1;
- const startX=30,startY=0;
 
- active.fill(0);
+ // 次のブロックが出せる場所を探す
+ const candidates=[20,30,40,10,50,0,60];
+ let startX=null;
+
+ for(const candidate of candidates){
+  let clear=true;
+
+  for(let by=0;by<shape.length&&clear;by++){
+   for(let bx=0;bx<shape[by].length&&clear;bx++){
+    if(!shape[by][bx])continue;
+
+    for(let dy=0;dy<10&&clear;dy++){
+     for(let dx=0;dx<10;dx++){
+      const x=candidate+bx*10+dx;
+      const y=1+by*10+dy;
+      if(!inside(x,y)||occupancy[idx(x,y)]){
+       clear=false;
+       break;
+      }
+     }
+    }
+   }
+  }
+
+  if(clear){startX=candidate;break}
+ }
+
+ if(startX===null){
+  endGame();
+  return;
+ }
 
  for(let by=0;by<shape.length;by++){
   for(let bx=0;bx<shape[by].length;bx++){
@@ -346,169 +347,236 @@ function spawnSand(){
    for(let dy=0;dy<10;dy++){
     for(let dx=0;dx<10;dx++){
      const x=startX+bx*10+dx;
-     const y=startY+by*10+dy;
-     if(!inside(x,y))continue;
-
-     const i=idx(x,y);
-     if(sand[i]){
-      endGame();
-      return;
-     }
-     sand[i]=color;
-     active[i]=1;
+     const y=1+by*10+dy;
+     particles.push(makeParticle(x,y,color,true,false));
     }
    }
   }
  }
 }
 
-// 操作対象の砂粒をまとめて左右移動
+// 操作中の粒だけを左右移動
 function sandMove(dx){
- const points=[];
+ const group=particles.filter(p=>p.controlled);
+ if(!group.length)return;
 
- for(let y=0;y<SH;y++){
-  for(let x=0;x<SW;x++){
-   const i=idx(x,y);
-   if(active[i]&&sand[i]){
-    const nx=x+dx;
-    if(!inside(nx,y))return;
-    const ni=idx(nx,y);
-    if(sand[ni]&&!active[ni])return;
-    points.push([i,ni,sand[i]]);
-   }
-  }
+ rebuildOccupancy();
+
+ const movingCells=new Set(group.map(p=>idx(Math.floor(p.x),Math.floor(p.y))));
+ const step=dx*10;
+
+ for(const p of group){
+  const nx=Math.floor(p.x+step);
+  const ny=Math.floor(p.y);
+  if(!inside(nx,ny))return;
+
+  const ni=idx(nx,ny);
+  if(occupancy[ni]&&!movingCells.has(ni))return;
  }
 
- for(const [from] of points){
-  sand[from]=0;
-  active[from]=0;
- }
-
- for(const [,to,color] of points){
-  sand[to]=color;
-  active[to]=1;
+ for(const p of group){
+  p.x+=step;
+  p.prevX=p.x;
  }
 }
 
-// 操作対象の砂粒を中心から回転
+// 操作中の粒をまとめて回転
 function sandRotate(){
- const points=[];
- let sx=0,sy=0;
+ const group=particles.filter(p=>p.controlled);
+ if(!group.length)return;
 
- for(let y=0;y<SH;y++){
-  for(let x=0;x<SW;x++){
-   const i=idx(x,y);
-   if(active[i]&&sand[i]){
-    points.push([x,y,sand[i]]);
-    sx+=x;sy+=y;
-   }
-  }
- }
+ rebuildOccupancy();
 
- if(!points.length)return;
+ let cx=0,cy=0;
+ for(const p of group){cx+=p.x;cy+=p.y}
+ cx/=group.length;
+ cy/=group.length;
 
- const cx=sx/points.length;
- const cy=sy/points.length;
- const next=[];
- const destinations=new Set();
+ const destinations=[];
+ const movingCells=new Set(group.map(p=>idx(Math.floor(p.x),Math.floor(p.y))));
+ const used=new Set();
 
- for(const [x,y,color] of points){
-  const nx=Math.round(cx-(y-cy));
-  const ny=Math.round(cy+(x-cx));
+ for(const p of group){
+  const nx=Math.round(cx-(p.y-cy));
+  const ny=Math.round(cy+(p.x-cx));
 
   if(!inside(nx,ny))return;
 
   const ni=idx(nx,ny);
-  if(destinations.has(ni))return;
-  if(sand[ni]&&!active[ni])return;
+  if(used.has(ni))return;
+  if(occupancy[ni]&&!movingCells.has(ni))return;
 
-  destinations.add(ni);
-  next.push([nx,ny,color]);
+  used.add(ni);
+  destinations.push([p,nx,ny]);
  }
 
- for(const [x,y] of points){
-  const i=idx(x,y);
-  sand[i]=0;
-  active[i]=0;
- }
-
- for(const [x,y,color] of next){
-  const i=idx(x,y);
-  sand[i]=color;
-  active[i]=1;
+ for(const [p,x,y] of destinations){
+  p.x=x;p.y=y;
+  p.prevX=x;p.prevY=y;
  }
 }
 
-// 砂粒を1段階落下させる
-// trueなら今回の砂が落ち着いて次の砂を出した
-function sandStep(){
- let moved=false;
- const leftFirst=Math.random()<0.5;
+// スペースを押したら前の粒は操作不能にし、爆速落下へ
+function sandHardDrop(){
+ const group=particles.filter(p=>p.controlled);
+ if(!group.length)return;
 
- // 下から処理することで自然に崩れる
- for(let y=SH-2;y>=0;y--){
-  for(let k=0;k<SW;k++){
-   const x=leftFirst?k:SW-1-k;
-   const i=idx(x,y);
+ for(const p of group){
+  p.controlled=false;
+  p.boost=true;
+  p.vy=260+Math.random()*35;
+  p.vx+=(Math.random()-.5)*2;
+ }
 
-   if(!active[i]||!sand[i])continue;
+ // 前の粒が落下を始めた瞬間に次のブロックを出す
+ spawnSand();
+}
 
-   const color=sand[i];
-   const below=idx(x,y+1);
+// 粒の物理演算
+function updateSandPhysics(dt){
+ if(!particles.length)return;
 
-   if(!sand[below]){
-    sand[below]=color;
-    active[below]=1;
-    sand[i]=0;
-    active[i]=0;
-    moved=true;
-    continue;
+ rebuildOccupancy();
+
+ // 下の粒から先に処理
+ particles.sort((a,b)=>b.y-a.y);
+
+ const next=[];
+ const gravity=420;
+ const maxSpeed=90;
+
+ for(const p of particles){
+  const oldX=Math.floor(p.x);
+  const oldY=Math.floor(p.y);
+  const oldIndex=inside(oldX,oldY)?idx(oldX,oldY):-1;
+
+  if(oldIndex>=0)occupancy[oldIndex]=0;
+
+  p.prevX=p.x;
+  p.prevY=p.y;
+
+  if(p.boost){
+   // スペース直後は爆速
+   p.vy=Math.max(85,p.vy-90*dt);
+  }else{
+   p.vy=Math.min(maxSpeed,p.vy+gravity*dt);
+  }
+
+  p.vx*=Math.pow(.985,dt*60);
+
+  const targetY=p.y+p.vy*dt;
+  const targetX=p.x+p.vx*dt;
+
+  const targetCellY=Math.floor(targetY);
+  const currentCellY=Math.floor(p.y);
+  const cellX=Math.floor(targetX);
+
+  let blocked=false;
+  let hitY=targetCellY;
+
+  // 高速落下でも途中の粒をすり抜けない
+  for(let y=currentCellY+1;y<=targetCellY;y++){
+   if(y>=SH||!inside(cellX,y)||occupancy[idx(cellX,y)]){
+    blocked=true;
+    hitY=y;
+    break;
    }
+  }
 
-   const dirs=Math.random()<0.5?[-1,1]:[1,-1];
-   let did=false;
+  if(!blocked){
+   p.x=targetX;
+   p.y=targetY;
+  }else{
+   p.boost=false;
+   p.vy=Math.min(p.vy,24);
 
-   for(const dx of dirs){
-    const nx=x+dx,ny=y+1;
-    if(!inside(nx,ny))continue;
+   // ぶつかったら左右にパラパラ崩れる
+   const dirs=Math.random()<.5?[-1,1]:[1,-1];
+   let slipped=false;
 
-    const ni=idx(nx,ny);
-    if(!sand[ni]){
-     sand[ni]=color;
-     active[ni]=1;
-     sand[i]=0;
-     active[i]=0;
-     moved=true;
-     did=true;
+   for(const dir of dirs){
+    const nx=Math.floor(p.x)+dir;
+    const ny=Math.max(0,hitY);
+
+    if(inside(nx,ny)&&!occupancy[idx(nx,ny)]){
+     p.x=nx+.15;
+     p.y=Math.max(p.y,ny-.15);
+     p.vx=dir*(5+Math.random()*10);
+     p.vy=12+Math.random()*12;
+     slipped=true;
      break;
     }
    }
+
+   if(!slipped){
+    const sx=Math.max(0,Math.min(SW-1,Math.floor(p.x)));
+    const sy=Math.max(0,Math.min(SH-1,hitY-1));
+
+    if(!sand[idx(sx,sy)]){
+     sand[idx(sx,sy)]=p.color;
+     continue;
+    }
+
+    // すぐ下が詰まっている場合は現在位置に落ち着く
+    const fx=Math.max(0,Math.min(SW-1,Math.floor(p.x)));
+    const fy=Math.max(0,Math.min(SH-1,Math.floor(p.y)));
+
+    if(!sand[idx(fx,fy)]){
+     sand[idx(fx,fy)]=p.color;
+     continue;
+    }
+   }
+  }
+
+  // 画面外や重なりを防止
+  p.x=Math.max(0,Math.min(SW-1.001,p.x));
+  p.y=Math.max(0,Math.min(SH-1.001,p.y));
+
+  const finalX=Math.floor(p.x);
+  const finalY=Math.floor(p.y);
+  const fi=idx(finalX,finalY);
+
+  if(occupancy[fi]){
+   // 移動先が埋まっていたら少しだけ横に逃がす
+   let escaped=false;
+   for(const dir of [-1,1]){
+    const nx=finalX+dir;
+    if(inside(nx,finalY)&&!occupancy[idx(nx,finalY)]){
+     p.x=nx+.1;
+     occupancy[idx(nx,finalY)]=1;
+     escaped=true;
+     break;
+    }
+   }
+
+   if(!escaped){
+    if(!sand[fi])sand[fi]=p.color;
+    continue;
+   }
+  }else{
+   occupancy[fi]=1;
+  }
+
+  next.push(p);
+ }
+
+ particles=next;
+
+ // 操作中の粒が全部落ち着いたら自然に次のブロック
+ if(!particles.some(p=>p.controlled)&&!gameOver){
+  if(!particles.some(p=>p.boost)){
+   // ここでは落ち着いた粒は sand に移されている
   }
  }
 
- if(moved)return false;
-
- // 全粒が落ち着いたら、左右をつなぐ同色の砂を消す
- const removed=checkSandBridge();
-
- if(removed){
-  // 消えた場所に向かって残りの砂も落ちるようにする
-  active.fill(0);
-  for(let i=0;i<sand.length;i++){
-   if(sand[i])active[i]=1;
-  }
-  return false;
- }
-
- spawnSand();
- return true;
+ checkSandBridge();
 }
 
-// 同じ色の粒だけを8方向につなげて調べる
+// 同じ色だけでつながった砂が左右をつないだら消す
 function checkSandBridge(){
- const seen=new Uint8Array(SW*SH);
- const q=new Int32Array(SW*SH);
- let removeCount=0;
+ const seen=new Uint8Array(TOTAL);
+ const queue=new Int32Array(TOTAL);
+ let removed=0;
 
  for(let y=0;y<SH;y++){
   for(let x=0;x<SW;x++){
@@ -520,20 +588,20 @@ function checkSandBridge(){
    let head=0,tail=0;
    let left=false,right=false;
 
-   q[tail++]=start;
+   queue[tail++]=start;
    seen[start]=1;
 
    while(head<tail){
-    const current=q[head++];
-    const cx=current%SW;
-    const cy=Math.floor(current/SW);
+    const cur=queue[head++];
+    const cx=cur%SW;
+    const cy=Math.floor(cur/SW);
 
     if(cx===0)left=true;
     if(cx===SW-1)right=true;
 
     for(let dy=-1;dy<=1;dy++){
      for(let dx=-1;dx<=1;dx++){
-      if(dx===0&&dy===0)continue;
+      if(!dx&&!dy)continue;
 
       const nx=cx+dx,ny=cy+dy;
       if(!inside(nx,ny))continue;
@@ -541,7 +609,7 @@ function checkSandBridge(){
       const ni=idx(nx,ny);
       if(!seen[ni]&&sand[ni]===color){
        seen[ni]=1;
-       q[tail++]=ni;
+       queue[tail++]=ni;
       }
      }
     }
@@ -549,42 +617,33 @@ function checkSandBridge(){
 
    if(left&&right){
     for(let i=0;i<tail;i++){
-     const ni=q[i];
-     sand[ni]=0;
-     active[ni]=0;
-     removeCount++;
+     sand[queue[i]]=0;
+     removed++;
     }
    }
   }
  }
 
- if(removeCount){
-  score+=removeCount;
+ if(removed){
+  score+=removed;
   lines++;
   updateStats();
-  return true;
  }
-
- return false;
 }
 
 /* 操作 */
 
 function move(dx){
  if(!running||paused||gameOver)return;
-
  if(mode==='normal')normalMove(dx);
  else sandMove(dx);
-
  draw();
 }
 
 function rotate(){
  if(!running||paused||gameOver)return;
-
  if(mode==='normal')normalRotate();
  else sandRotate();
-
  draw();
 }
 
@@ -595,11 +654,11 @@ function softDrop(){
   if(!normalCollides(piece,0,1)){
    piece.y++;
    score++;
-  }else{
-   normalLock();
-  }
+  }else normalLock();
  }else{
-  sandStep();
+  for(const p of particles){
+   if(p.controlled)p.vy=Math.max(p.vy,85);
+  }
  }
 
  updateStats();
@@ -618,11 +677,7 @@ function hardDrop(){
   score+=distance*2;
   normalLock();
  }else{
-  // 現在の砂だけを落ち着くまで進める
-  for(let i=0;i<250;i++){
-   if(sandStep())break;
-   if(gameOver)break;
-  }
+  sandHardDrop();
  }
 
  updateStats();
@@ -660,14 +715,25 @@ function drawNormal(){
 }
 
 function drawSand(){
+ // 固まった砂
  for(let y=0;y<SH;y++){
   for(let x=0;x<SW;x++){
    const c=sand[idx(x,y)];
    if(!c)continue;
-
    ctx.fillStyle=COLORS[c-1];
    ctx.fillRect(x*MICRO,y*MICRO,MICRO,MICRO);
   }
+ }
+
+ // 動いている粒は小数座標で描画して滑らかに
+ for(const p of particles){
+  ctx.fillStyle=COLORS[p.color-1];
+  ctx.fillRect(
+   p.x*MICRO,
+   p.y*MICRO,
+   MICRO,
+   MICRO
+  );
  }
 }
 
@@ -678,21 +744,12 @@ function draw(){
 
  if(mode==='normal'){
   ctx.strokeStyle='#ffffff0b';
-
   for(let x=0;x<=W;x++){
-   ctx.beginPath();
-   ctx.moveTo(x*S,0);
-   ctx.lineTo(x*S,600);
-   ctx.stroke();
+   ctx.beginPath();ctx.moveTo(x*S,0);ctx.lineTo(x*S,600);ctx.stroke();
   }
-
   for(let y=0;y<=H;y++){
-   ctx.beginPath();
-   ctx.moveTo(0,y*S);
-   ctx.lineTo(300,y*S);
-   ctx.stroke();
+   ctx.beginPath();ctx.moveTo(0,y*S);ctx.lineTo(300,y*S);ctx.stroke();
   }
-
   drawNormal();
  }else{
   drawSand();
@@ -704,7 +761,6 @@ function draw(){
 function endGame(){
  running=false;
  gameOver=true;
-
  document.getElementById('overlayTitle').textContent='GAME OVER';
  document.getElementById('overlayResume').textContent='もう一度';
  document.getElementById('overlayResume').onclick=restartGame;
@@ -715,7 +771,6 @@ function togglePause(){
  if(gameOver)return;
 
  paused=!paused;
-
  document.getElementById('overlayTitle').textContent='PAUSE';
  document.getElementById('overlayResume').textContent='再開';
  document.getElementById('overlayResume').onclick=togglePause;
@@ -730,30 +785,25 @@ function togglePause(){
 function loop(time){
  if(!running)return;
 
- const delta=Math.min(time-lastTime,100);
+ const delta=Math.min((time-lastTime)/1000,.04);
  lastTime=time;
 
  if(!paused&&!gameOver){
-  elapsed+=delta;
+  elapsed+=delta*1000;
 
   if(mode==='normal'){
-   normalTimer+=delta;
-
+   normalTimer+=delta*1000;
    if(normalTimer>=normalInterval){
     normalTimer=0;
-
-    if(!normalCollides(piece,0,1)){
-     piece.y++;
-    }else{
-     normalLock();
-    }
+    if(!normalCollides(piece,0,1))piece.y++;
+    else normalLock();
    }
   }else{
-   sandTimer+=delta;
+   updateSandPhysics(delta);
 
-   if(sandTimer>=sandInterval()){
-    sandTimer=0;
-    sandStep();
+   // 操作中の粒がなくなったら新しいブロックを出す
+   if(!particles.some(p=>p.controlled)&&!particles.some(p=>p.boost)&&!gameOver){
+    spawnSand();
    }
   }
 
@@ -763,17 +813,11 @@ function loop(time){
  animationId=requestAnimationFrame(loop);
 }
 
-/* キーボード操作 */
+/* キーボード */
 
 window.addEventListener('keydown',e=>{
- const keys=[
-  'ArrowLeft','ArrowRight','ArrowUp',
-  'ArrowDown','Space'
- ];
-
- if(keys.includes(e.code)){
-  e.preventDefault();
- }
+ const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'];
+ if(keys.includes(e.code))e.preventDefault();
 
  if(!document.getElementById('gameScreen').classList.contains('active'))return;
 
@@ -781,27 +825,18 @@ window.addEventListener('keydown',e=>{
  if(e.code==='ArrowRight')move(1);
  if(e.code==='ArrowUp')rotate();
  if(e.code==='ArrowDown')softDrop();
- if(e.code==='Space')hardDrop();
-
+ if(e.code==='Space'&&!e.repeat)hardDrop();
  if(e.code==='KeyP'||e.code==='Escape')togglePause();
 },{passive:false});
 
-/* タップ・スワイプ操作 */
+/* スワイプ・タップ */
 
 let pointerStart=null;
-let pointerUsed=false;
 
 canvas.addEventListener('pointerdown',e=>{
  if(e.pointerType==='mouse'&&e.button!==0)return;
-
  e.preventDefault();
- pointerStart={
-  x:e.clientX,
-  y:e.clientY,
-  id:e.pointerId
- };
- pointerUsed=false;
-
+ pointerStart={x:e.clientX,y:e.clientY};
  try{canvas.setPointerCapture(e.pointerId)}catch(err){}
 },{passive:false});
 
@@ -814,41 +849,25 @@ canvas.addEventListener('pointerup',e=>{
  const distance=Math.hypot(dx,dy);
 
  if(distance<18){
-  // タップしたら回転
   rotate();
  }else if(Math.abs(dx)>Math.abs(dy)){
-  // 横スワイプで移動
   const steps=Math.min(5,Math.max(1,Math.floor(Math.abs(dx)/28)));
-  for(let i=0;i<steps;i++){
-   move(dx>0?1:-1);
-  }
+  for(let i=0;i<steps;i++)move(dx>0?1:-1);
  }else if(dy>0){
-  // 下スワイプで落下
   if(dy>100)hardDrop();
   else softDrop();
  }else{
-  // 上スワイプでも回転
   rotate();
  }
 
  pointerStart=null;
- pointerUsed=true;
  draw();
 },{passive:false});
 
-canvas.addEventListener('pointercancel',()=>{
- pointerStart=null;
-});
+canvas.addEventListener('pointercancel',()=>{pointerStart=null});
 
-/* ダブルタップやダブルクリックでの拡大を防止 */
-
-document.addEventListener('dblclick',e=>{
- e.preventDefault();
-},{passive:false});
-
-document.addEventListener('gesturestart',e=>{
- e.preventDefault();
-},{passive:false});
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
 
 draw();
 document.getElementById('best').textContent=best;
